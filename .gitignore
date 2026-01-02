@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+dist/
+build/
+
+# Kivy
+*.pyc
+.buildozer/
+
+# Android
+*.apk
+*.aab
+bin/
+gen/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+ayar_*.json
