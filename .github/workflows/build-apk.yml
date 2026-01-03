@@ -31,98 +31,60 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            python3-pip \
-            build-essential \
-            git \
-            zip \
-            unzip \
-            openjdk-17-jdk \
-            autoconf \
-            libtool \
-            pkg-config \
-            zlib1g-dev \
-            libncurses5-dev \
-            libncursesw5-dev \
-            libffi-dev \
-            libssl-dev
+            python3-pip build-essential git zip unzip \
+            openjdk-17-jdk autoconf libtool pkg-config \
+            zlib1g-dev libncurses5-dev libncursesw5-dev \
+            libffi-dev libssl-dev
 
-      - name: Install buildozer and dependencies
+      - name: Install buildozer
         run: |
           pip3 install --upgrade pip
-          pip3 install --upgrade Cython==0.29.33
-          pip3 install --upgrade buildozer
-          pip3 install --upgrade kivy
+          pip3 install --upgrade Cython==0.29.33 buildozer kivy
 
-      - name: Create main.py
+      - name: Create main.py if missing
         run: |
-          cat > main.py << 'PYEOF'
+          if [ ! -f "main.py" ]; then
+            cat > main.py << 'EOF'
           from kivy.app import App
           from kivy.uix.label import Label
 
-          class AYARTradingApp(App):
+          class AYARApp(App):
               def build(self):
-                  return Label(text='AYAR Trading - Welcome!')
+                  return Label(text='AYAR Trading')
 
           if __name__ == '__main__':
-              AYARTradingApp().run()
-          PYEOF
+              AYARApp().run()
+          EOF
+          fi
 
       - name: Create buildozer.spec
         run: |
-          cat > buildozer.spec << 'SPECEOF'
+          cat > buildozer.spec << 'EOF'
           [app]
           title = AYAR Trading
           package.name = ayartrading
           package.domain = com.h4mid649
           source.dir = .
-          source.include_exts = py,png,jpg,kv,atlas,ttf,txt
+          source.include_exts = py,png,jpg,kv,atlas,txt,html
           version = 1.0
-          requirements = python3,kivy
+          requirements = python3,kivy,requests
           orientation = portrait
-          fullscreen = 0
-          android.permissions = INTERNET,ACCESS_NETWORK_STATE
+          android.permissions = INTERNET
           android.api = 31
           android.minapi = 21
           android.ndk = 25b
           android.accept_sdk_license = True
-          android.archs = arm64-v8a,armeabi-v7a
-          android.allow_backup = True
+          android.archs = armeabi-v7a
 
           [buildozer]
           log_level = 2
-          warn_on_root = 1
-          SPECEOF
+          EOF
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew 2>/dev/null || true
-
-      - name: Build with Buildozer
-        run: |
-          buildozer android debug 2>&1 | tee build.log || true
-
-      - name: Upload build log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-log
-          path: build.log
-
-      - name: List bin directory
-        if: always()
-        run: |
-          echo "=== Contents of current directory ==="
-          ls -la
-          echo "=== Contents of bin directory (if exists) ==="
-          ls -la bin/ 2>/dev/null || echo "bin directory not found"
-          echo "=== Searching for APK files ==="
-          find . -name "*.apk" -type f 2>/dev/null || echo "No APK files found"
+      - name: Build APK
+        run: buildozer android debug
 
       - name: Upload APK
-        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: ayar-trading-apk
-          path: |
-            bin/*.apk
-            .buildozer/android/platform/build-*/build/outputs/apk/**/*.apk
-          if-no-files-found: warn
+          path: bin/*.apk
