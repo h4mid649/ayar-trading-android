@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AYAR Trading Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header .subtitle {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+
+        .stat-card .icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .label {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .stat-card .value {
+            color: #333;
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .stat-card.positive .value {
+            color: #22c55e;
+        }
+
+        .stat-card.negative .value {
+            color: #ef4444;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .chart-container h2 {
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .control-panel {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .control-panel h3 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .status {
+            padding: 10px 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status.running {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .trades-table {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+
+        .trades-table h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f8f9fa;
+            padding: 15px;
+            text-align: right;
+            color: #666;
+            font-weight: 600;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        td {
+            padding: 15px;
+            text-align: right;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .profit {
+            color: #22c55e;
+            font-weight: bold;
+        }
+
+        .loss {
+            color: #ef4444;
+            font-weight: bold;
+        }
+
+        .badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .badge.buy {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge.sell {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.8em;
+            }
+        }
+
+        .chart-bars {
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-end;
+            height: 250px;
+            margin-top: 30px;
+            padding: 0 20px;
+        }
+
+        .bar-item {
+            flex: 1;
+            max-width: 80px;
+            margin: 0 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .bar {
+            width: 100%;
+            background: linear-gradient(to top, #667eea, #764ba2);
+            border-radius: 8px 8px 0 0;
+            transition: height 0.5s ease;
+            position: relative;
+        }
+
+        .bar-label {
+            margin-top: 10px;
+            font-size: 0.85em;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .bar-value {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.75em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>📊 AYAR Trading Dashboard</h1>
+            <p class="subtitle">داشبورد حرفه‌ای سیستم معاملاتی بورس ایران</p>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="icon">💰</div>
+                <div class="label">سرمایه اولیه</div>
+                <div class="value" id="initialCapital">500M</div>
+            </div>
+
+            <div class="stat-card positive">
+                <div class="icon">📈</div>
+                <div class="label">سود خالص</div>
+                <div class="value" id="totalProfit">+0</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="icon">🎯</div>
+                <div class="label">تعداد معاملات</div>
+                <div class="value" id="totalTrades">0</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="icon">✅</div>
+                <div class="label">نرخ موفقیت</div>
+                <div class="value" id="winRate">0%</div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Chart -->
+            <div class="chart-container">
+                <h2>📊 نمودار عملکرد</h2>
+                <div class="chart-bars" id="performanceChart">
+                    <div class="bar-item">
+                        <div class="bar" style="height: 0px;" data-target="120">
+                            <span class="bar-value">+2.4%</span>
+                        </div>
+                        <div class="bar-label">شنبه</div>
+                    </div>
+                    <div class="bar-item">
+                        <div class="bar" style="height: 0px;" data-target="85">
+                            <span class="bar-value">+1.7%</span>
+                        </div>
+                        <div class="bar-label">یکشنبه</div>
+                    </div>
+                    <div class="bar-item">
+                        <div class="bar" style="height: 0px;" data-target="150">
+                            <span class="bar-value">+3.0%</span>
+                        </div>
+                        <div class="bar-label">دوشنبه</div>
+                    </div>
+                    <div class="bar-item">
+                        <div class="bar" style="height: 0px;" data-target="95">
+                            <span class="bar-value">+1.9%</span>
+                        </div>
+                        <div class="bar-label">سه‌شنبه</div>
+                    </div>
+                    <div class="bar-item">
+                        <div class="bar" style="height: 0px;" data-target="180">
+                            <span class="bar-value">+3.6%</span>
+                        </div>
+                        <div class="bar-label">چهارشنبه</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Control Panel -->
+            <div class="control-panel">
+                <h3>⚙️ کنترل سیستم</h3>
+                
+                <div class="form-group">
+                    <label>کد سهم (InsCode):</label>
+                    <input type="text" id="insCode" value="34144395039913458">
+                </div>
+
+                <div class="form-group">
+                    <label>سرمایه (میلیون ریال):</label>
+                    <input type="number" id="capital" value="500">
+                </div>
+
+                <div class="form-group">
+                    <label>ریسک (%):</label>
+                    <input type="number" id="risk" value="1.0" step="0.1">
+                </div>
+
+                <button class="btn" onclick="runTrading()">
+                    🚀 اجرای سیستم معاملاتی
+                </button>
+
+                <div class="status running" id="status" style="display:none;">
+                    ⏳ در حال بررسی بازار...
+                </div>
+            </div>
+        </div>
+
+        <!-- Trades Table -->
+        <div class="trades-table">
+            <h2>📋 تاریخچه معاملات</h2>
+            <table id="tradesTable">
+                <thead>
+                    <tr>
+                        <th>ردیف</th>
+                        <th>نوع</th>
+                        <th>قیمت ورود</th>
+                        <th>قیمت خروج</th>
+                        <th>تعداد</th>
+                        <th>سود/زیان</th>
+                        <th>درصد</th>
+                        <th>دلیل خروج</th>
+                        <th>زمان</th>
+                    </tr>
+                </thead>
+                <tbody id="tradesBody">
+                    <tr>
+                        <td colspan="9" class="loading">
+                            <div class="spinner"></div>
+                            در انتظار داده...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Sample data
+        const sampleTrades = [
+            {
+                id: 1,
+                type: 'buy',
+                entryPrice: 25000,
+                exitPrice: 25450,
+                qty: 2000,
+                pnl: 900000,
+                pnlPct: 1.8,
+                reason: 'TAKE_PROFIT',
+                time: '09:45:30'
+            },
+            {
+                id: 2,
+                type: 'buy',
+                entryPrice: 24800,
+                exitPrice: 25100,
+                qty: 2100,
+                pnl: 630000,
+                pnlPct: 1.2,
+                reason: 'TRAIL_STOP',
+                time: '10:15:20'
+            },
+            {
+                id: 3,
+                type: 'buy',
+                entryPrice: 25200,
+                exitPrice: 25050,
+                qty: 1950,
+                pnl: -292500,
+                pnlPct: -0.6,
+                reason: 'STOP_LOSS',
+                time: '11:30:45'
+            }
+        ];
+
+        // Animate chart on load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const bars = document.querySelectorAll('.bar');
+                bars.forEach(bar => {
+                    const target = bar.getAttribute('data-target');
+                    bar.style.height = target + 'px';
+                });
+            }, 500);
+
+            // Load sample data
+            loadTrades(sampleTrades);
+            updateStats(sampleTrades);
+        });
+
+        function loadTrades(trades) {
+            const tbody = document.getElementById('tradesBody');
+            
+            if (trades.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#999;">هنوز معامله‌ای انجام نشده است</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = trades.map(trade => `
+                <tr>
+                    <td>${trade.id}</td>
+                    <td><span class="badge ${trade.type}">${trade.type === 'buy' ? 'خرید' : 'فروش'}</span></td>
+                    <td>${trade.entryPrice.toLocaleString()}</td>
+                    <td>${trade.exitPrice.toLocaleString()}</td>
+                    <td>${trade.qty.toLocaleString()}</td>
+                    <td class="${trade.pnl >= 0 ? 'profit' : 'loss'}">${trade.pnl.toLocaleString()}</td>
+                    <td class="${trade.pnlPct >= 0 ? 'profit' : 'loss'}">${trade.pnlPct > 0 ? '+' : ''}${trade.pnlPct}%</td>
+                    <td>${trade.reason}</td>
+                    <td>${trade.time}</td>
+                </tr>
+            `).join('');
+        }
+
+        function updateStats(trades) {
+            const totalPnL = trades.reduce((sum, t) => sum + t.pnl, 0);
+            const wins = trades.filter(t => t.pnl > 0).length;
+            const winRate = trades.length > 0 ? (wins / trades.length * 100).toFixed(1) : 0;
+
+            document.getElementById('totalProfit').textContent = 
+                (totalPnL >= 0 ? '+' : '') + (totalPnL / 1000000).toFixed(1) + 'M';
+            document.getElementById('totalProfit').parentElement.className = 
+                totalPnL >= 0 ? 'stat-card positive' : 'stat-card negative';
+            
+            document.getElementById('totalTrades').textContent = trades.length;
+            document.getElementById('winRate').textContent = winRate + '%';
+        }
+
+        function runTrading() {
+            const status = document.getElementById('status');
+            const btn = event.target;
+            
+            status.style.display = 'block';
+            status.className = 'status running';
+            status.innerHTML = '⏳ در حال اتصال به GitHub Actions...';
+            btn.disabled = true;
+
+            // Simulate API call
+            setTimeout(() => {
+                status.className = 'status success';
+                status.innerHTML = '✅ درخواست با موفقیت ارسال شد! نتایج در Actions قابل مشاهده است.';
+                btn.disabled = false;
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
