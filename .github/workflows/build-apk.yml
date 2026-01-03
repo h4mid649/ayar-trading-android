@@ -2,6 +2,8 @@ name: Build APK
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ main, master ]
 
 jobs:
   build:
@@ -20,89 +22,93 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y \
-            git zip unzip \
-            openjdk-17-jdk \
-            build-essential \
-            autoconf libtool pkg-config \
-            zlib1g-dev \
-            libffi-dev libssl-dev \
-            libncurses5-dev libncursesw5-dev libtinfo5 \
-            cmake
+            git zip unzip openjdk-17-jdk \
+            build-essential autoconf libtool pkg-config \
+            zlib1g-dev libffi-dev libssl-dev \
+            libncurses5-dev libncursesw5-dev libtinfo5 cmake
 
-      - name: Install Buildozer + Cython
+      - name: Install Buildozer
         run: |
           python -m pip install --upgrade pip
-          pip install "Cython==0.29.19" buildozer kivy
+          pip install --upgrade buildozer cython kivy
 
-      # ✅ اضافه کردن این مرحله جدید برای قبول لایسنس
-      - name: Setup Android SDK and Accept Licenses
-        run: |
-          mkdir -p $HOME/.android
-          touch $HOME/.android/repositories.cfg
-          
-          # ایجاد پوشه لایسنس‌ها
-          mkdir -p $HOME/.buildozer/android/platform/android-sdk/licenses
-          
-          # اضافه کردن لایسنس‌ها
-          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $HOME/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
-          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> $HOME/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
-          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $HOME/.buildozer/android/platform/android-sdk/licenses/android-sdk-preview-license
-
-      - name: Ensure main.py exists (required by Buildozer)
+      - name: Create main.py if missing
         run: |
           if [ ! -f "main.py" ]; then
-            cat > main.py <<'PY'
-from kivy.app import App
-from kivy.uix.label import Label
+            cat > main.py <<'EOF'
+          from kivy.app import App
+          from kivy.uix.label import Label
 
-class AYARApp(App):
-    def build(self):
-        return Label(text="AYAR Trading APK build is OK")
+          class AYARApp(App):
+              def build(self):
+                  return Label(text="AYAR Trading")
 
-AYARApp().run()
-PY
+          if __name__ == '__main__':
+              AYARApp().run()
+          EOF
           fi
 
-      - name: Create/Update buildozer.spec
+      - name: Initialize buildozer.spec
         run: |
-          buildozer init || true
+          if [ ! -f "buildozer.spec" ]; then
+            buildozer init
+          fi
 
-          grep -q '^source.include_exts' buildozer.spec \
-            && sed -i 's/^source.include_exts.*/source.include_exts = py,kv,png,jpg,jpeg,svg,gif,html,css,js/' buildozer.spec \
-            || echo 'source.include_exts = py,kv,png,jpg,jpeg,svg,gif,html,css,js' >> buildozer.spec
-
-          grep -q '^requirements' buildozer.spec \
-            && sed -i 's/^requirements.*/requirements = python3,kivy,requests/' buildozer.spec \
-            || echo 'requirements = python3,kivy,requests' >> buildozer.spec
-
-          grep -q '^android.accept_sdk_license' buildozer.spec \
-            && sed -i 's/^android.accept_sdk_license.*/android.accept_sdk_license = True/' buildozer.spec \
-            || echo 'android.accept_sdk_license = True' >> buildozer.spec
-
-          # تنظیم نسخه Build Tools به یک نسخه پایدار
-          grep -q '^android.build_tools' buildozer.spec \
-            && sed -i 's/^android.build_tools.*/android.build_tools = 33.0.2/' buildozer.spec \
-            || echo 'android.build_tools = 33.0.2' >> buildozer.spec
-
-          grep -q '^android.api' buildozer.spec \
-            && sed -i 's/^android.api.*/android.api = 33/' buildozer.spec \
-            || echo 'android.api = 33' >> buildozer.spec
-
-          grep -q '^android.minapi' buildozer.spec \
-            && sed -i 's/^android.minapi.*/android.minapi = 21/' buildozer.spec \
-            || echo 'android.minapi = 21' >> buildozer.spec
+      - name: Configure buildozer.spec
+        run: |
+          # Title and package
+          sed -i 's/^title =.*/title = AYAR Trading/' buildozer.spec
+          sed -i 's/^package.name =.*/package.name = ayartrading/' buildozer.spec
+          sed -i 's/^package.domain =.*/package.domain = com.h4mid649/' buildozer.spec
           
-          # تنظیم NDK
-          grep -q '^android.ndk' buildozer.spec \
-            && sed -i 's/^android.ndk.*/android.ndk = 25b/' buildozer.spec \
-            || echo 'android.ndk = 25b' >> buildozer.spec
+          # Requirements
+          sed -i 's/^#\?requirements =.*/requirements = python3,kivy/' buildozer.spec
+          
+          # Android settings
+          sed -i 's/^#\?android.api =.*/android.api = 33/' buildozer.spec
+          sed -i 's/^#\?android.minapi =.*/android.minapi = 21/' buildozer.spec
+          sed -i 's/^#\?android.ndk =.*/android.ndk = 25b/' buildozer.spec
+          sed -i 's/^#\?android.accept_sdk_license =.*/android.accept_sdk_license = True/' buildozer.spec
+          
+          # Permissions
+          sed -i 's/^#\?android.permissions =.*/android.permissions = INTERNET/' buildozer.spec
 
-      - name: Build APK
+      - name: Cache Buildozer
+        uses: actions/cache@v3
+        with:
+          path: |
+            .buildozer
+            ~/.buildozer
+          key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
+          restore-keys: |
+            ${{ runner.os }}-buildozer-
+
+      - name: Accept Android SDK Licenses (Pre-build)
+        run: |
+          mkdir -p ~/.android
+          touch ~/.android/repositories.cfg
+          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > ~/.android/android-sdk-license
+          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> ~/.android/android-sdk-license
+
+      - name: Build APK with Buildozer
         run: |
           buildozer -v android debug
 
+      - name: Accept Android SDK Licenses (Post-build fallback)
+        if: failure()
+        run: |
+          SDK_DIR="$HOME/.buildozer/android/platform/android-sdk"
+          if [ -d "$SDK_DIR" ]; then
+            mkdir -p "$SDK_DIR/licenses"
+            echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > "$SDK_DIR/licenses/android-sdk-license"
+            echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> "$SDK_DIR/licenses/android-sdk-license"
+            buildozer -v android debug
+          fi
+
       - name: Upload APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: APK
+          name: ayar-trading-apk
           path: bin/*.apk
+          if-no-files-found: error
