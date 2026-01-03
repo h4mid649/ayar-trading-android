@@ -23,17 +23,19 @@ jobs:
   trading:
     name: اجرای سیستم معاملاتی
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     
     steps:
     # دانلود کد
     - name: 📥 دانلود کد از Repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     
     # نصب Python
     - name: 🐍 نصب Python 3.10
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.10'
+        cache: 'pip'
     
     # نصب کتابخانه‌ها
     - name: 📦 نصب کتابخانه‌های مورد نیاز
@@ -63,11 +65,12 @@ jobs:
     # ذخیره نتایج
     - name: 💾 ذخیره لاگ‌ها و نتایج
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: نتایج-معامله
+        name: نتایج-معامله-${{ github.run_number }}
         path: |
           ayar_trading.log
           ayar_state.json
           ayar_metrics.json
         retention-days: 30
+        if-no-files-found: warn
