@@ -1,90 +1,28 @@
-name: Build APK
+name: Build Android APK
 
-on:
-  workflow_dispatch:
+on: [push]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
-
-      - name: Install system dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y \
-            git zip unzip \
-            openjdk-17-jdk \
-            build-essential \
-            autoconf libtool pkg-config \
-            zlib1g-dev \
-            libffi-dev libssl-dev \
-            libncurses5-dev libncursesw5-dev libtinfo5 \
-            cmake
-
-      - name: Install Buildozer + Cython
-        run: |
-          python -m pip install --upgrade pip
-          # طبق تجربه/مستندات، Cython نسخه 0.29.x سازگارتر است
-          pip install "Cython==0.29.19" buildozer kivy
-
-      - name: Ensure main.py exists (required by Buildozer)
-        run: |
-          if [ ! -f "main.py" ]; then
-            cat > main.py <<'PY'
-from kivy.app import App
-from kivy.uix.label import Label
-
-class AYARApp(App):
-    def build(self):
-        return Label(text="AYAR Trading APK build is OK")
-
-AYARApp().run()
-PY
-          fi
-
-      - name: Create/Update buildozer.spec
-        run: |
-          buildozer init || true
-
-          # حداقل تنظیمات لازم
-          grep -q '^source.include_exts' buildozer.spec \
-            && sed -i 's/^source.include_exts.*/source.include_exts = py,kv,png,jpg,jpeg,svg,gif,html,css,js/' buildozer.spec \
-            || echo 'source.include_exts = py,kv,png,jpg,jpeg,svg,gif,html,css,js' >> buildozer.spec
-
-          # وابستگی‌ها را سبک نگه می‌داریم تا Build حتماً موفق شود
-          # (اگر بعداً خواستید، می‌توانید موارد دیگر را اضافه کنید)
-          grep -q '^requirements' buildozer.spec \
-            && sed -i 's/^requirements.*/requirements = python3,kivy,requests/' buildozer.spec \
-            || echo 'requirements = python3,kivy,requests' >> buildozer.spec
-
-          # حل مشکل لایسنس و AIDL در CI (مهم‌ترین خط)
-          grep -q '^android.accept_sdk_license' buildozer.spec \
-            && sed -i 's/^android.accept_sdk_license.*/android.accept_sdk_license = True/' buildozer.spec \
-            || echo 'android.accept_sdk_license = True' >> buildozer.spec
-
-          # (اختیاری ولی کمک‌کننده) پین کردن API
-          grep -q '^android.api' buildozer.spec \
-            && sed -i 's/^android.api.*/android.api = 33/' buildozer.spec \
-            || echo 'android.api = 33' >> buildozer.spec
-
-          grep -q '^android.minapi' buildozer.spec \
-            && sed -i 's/^android.minapi.*/android.minapi = 21/' buildozer.spec \
-            || echo 'android.minapi = 21' >> buildozer.spec
-
-      - name: Build APK
-        run: |
-          buildozer -v android debug
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: APK
-          path: bin/*.apk
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Accept Android licenses
+      run: |
+        mkdir -p $ANDROID_HOME/licenses
+        echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_HOME/licenses/android-sdk-license
+        yes | sdkmanager --licenses || true
+    
+    - name: Install Buildozer
+      run: |
+        pip install buildozer cython
+    
+    - name: Build with Buildozer
+      run: buildozer android debug
