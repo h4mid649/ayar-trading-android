@@ -1,0 +1,35 @@
+name: Build APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install system dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y openjdk-17-jdk zip unzip
+        pip install --upgrade pip
+        pip install kivy buildozer
+
+    - name: Build APK
+      run: |
+        buildozer init || true
+        sed -i 's/^requirements = .*/requirements = python3,kivy,requests,pandas,numpy/' buildozer.spec
+        buildozer android debug
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: APK
+        path: bin/*.apk
